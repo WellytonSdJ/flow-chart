@@ -1,3 +1,21 @@
+# React Flow
+
+## Regras:
+
+- [ ] os nodes SEMPRE descem - não podem subir
+- [ ] deve ter uma distancia padrão
+- [ ] SEMPRE será inicado com o balão 'inicio'
+- [ ] ao clicar num balão poderá ser 'condicional' ou 'balão'
+- [ ] cada balão terá um 'editar' ao clicar nele abrirá um modal com um textInput
+- [ ] quando clicar em 'condicional' ele abrirá dois balões abaixo a mais
+- [ ] espaços entre eles sempre será os mesmos de altura e não poderá arrastar pra baixo.
+- [ ] adicionar opção de 'coding' para que possa ser adicionado código aos balões
+- [ ] o retorno final será um JSON.
+
+---------------------------------------------------------------------------
+
+
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
