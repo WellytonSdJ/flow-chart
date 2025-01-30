@@ -26,9 +26,7 @@ const initialNodes: Node[] = [
     id: '0',
     type: 'input',
     data: { label: 'Inicio' },
-    position: { x: 0, y: 50 },
-    // Specify the custom class acting as a drag handle
-    dragHandle: '.drag-handle__custom',
+    position: { x: 0, y: 50 },    
   },
 ]
 const nodeTypes = {
@@ -38,6 +36,8 @@ const nodeTypes = {
 let id = 1;
 const getId = () => `${id++}`
 const nodeOrigin: [number, number] = [0.5, 0];
+
+const initialEdge = []
 
 
 export function Flow() {
@@ -58,63 +58,67 @@ export function Flow() {
     (event: { stopPropagation: () => void; }, node: Node) => {
       event.stopPropagation();
       const { id, data, position } = node
-      console.log('node', node)
+      console.log('node', node.position)
       setSelectedNode({ id, data, position });
     },
     []
   );
 
+  const existingNodesInSameYAxis = (newNode: Node | Node[]): boolean => {
+    if (Array.isArray(newNode)) {
+      return newNode.some(n => nodes.some(node => node.position.y === n.position.y));
+    }
+    return nodes.some(node => node.position.y === newNode.position.y);
+  }
 
+  const checkSelectedNodeXPosition = () => {
+    if (selectedNode) {
+      const { x } = selectedNode.position;
+      return x;
+    }
+    return null;
+  }
 
   const addNode = useCallback(
     (event: React.MouseEventHandler<HTMLButtonElement>) => {
-      const { clientX, clientY } =
-        'changedTouches' in event ? event.changedTouches[0] : event;
-
-        console.log('selectedNode', selectedNode)
-        const baseX = selectedNode?.position.x ?? 0
-        const baseY = selectedNode?.position.y ?? 50
-
-      console.log('add node', {baseX, baseY})  
-
+      console.log('selectedNode', selectedNode)
+      const baseX = selectedNode?.position.x ?? 0
+      const baseY = selectedNode?.position.y ?? 50
       
+      console.log('add node', { baseX, baseY })
 
       const newNode: Node = {
         id: getId(),
         position: {
           x: baseX,
-          y: baseY + 150
+          y: baseY + 100
         },
         data: { label: `Node ${id}` },
         type: 'input',
-        // origin: [0.5, 0.0],
       };
 
-      // Verifica se há conflito de posição entre o novo nó e os nós existentes
-      const hasConflict = (newNode: Node) =>
-        nodes.some(
-          (existingNode) =>
-            // Verifica se o newNode está na mesma posição de algum node dentro do state de nodes
-            Math.abs(existingNode.position.x - newNode.position.x) < 150 &&
-            existingNode.position.y === newNode.position.y,
-        );
+      setNodes((nds) => {
+        if (existingNodesInSameYAxis(newNode)) {
+          console.log('-> ', checkSelectedNodeXPosition())
+          const selectedNodeX = checkSelectedNodeXPosition();
+          if (selectedNodeX !== null && selectedNodeX >= 0){
+            // adiciona o novo node depois do maior
+            const maxX = Math.max(...nds.filter((node) => node.position.y === newNode.position.y).map((node) => node.position.x));
+            newNode.position.x = maxX + 300;
+          }
+          if(selectedNodeX !== null && selectedNodeX < 0){
+            // adiciona o novo node antes do menor
+            const minX = Math.min(...nds.filter((node) => node.position.y === newNode.position.y).map((node) => node.position.x));
+            newNode.position.x = minX - 300;
+          }
+        }
 
-      if (hasConflict(newNode)) {
-        const newNodeWithConflictResolution = {
-          ...newNode,
-          position: {
-            x: newNode.position.x + newNode.data.label.length * 10 + 50,
-            y: newNode.position.y,
-          },
-        };
-        setNodes(nds => [...nds, newNodeWithConflictResolution]);
-      } else {
-        setNodes(nds => [...nds, newNode]);
+        return [...nds, newNode];
+      });
+
+      if (selectedNode) {
+        setEdges(eds => [...eds, { id: getId(), source: selectedNode.id, target: newNode.id, type: 'smoothstep', animated: true }]);
       }
-
-      console.log(hasConflict(newNode))
-
-
     },
     [nodes, screenToFlowPosition, selectedNode],
   );
@@ -130,50 +134,45 @@ export function Flow() {
         baseY
       })
 
-    const newNodes: Node[] = [
+    const newConditions: Node[] = [
       {
         id: getId(),
-        position: { x: baseX, y: baseY + 100 },
-        data: { label: `Conditional ${id}` },
-        type: 'input',
-      },
-      {
-        id: getId(),
-        position: { x: baseX - 100, y: baseY + 150 },
+        position: { x: baseX - 150, y: baseY + 100 },
         data: { label: `condition 1 ${id}` },
         type: 'input',
       },
       {
         id: getId(),
-        position: { x: baseX + 100, y: baseY + 150 },
+        position: { x: baseX + 150, y: baseY + 100 },
         data: { label: `condition 2 ${id}` },
         type: 'input',
       },
     ];
 
-    const hasConflict = (newNodes: Node[]) =>
-      newNodes.some(
-        (newNode) =>
-          nodes.some(
-            (existingNode) =>
-              // Verifica se a diferença na posição x é menor ou igual a 100
-              Math.abs(existingNode.position.x - newNode.position.x) <= 100 &&
-              // Verifica se a diferença na posição y é menor ou igual a 100
-              Math.abs(existingNode.position.y - newNode.position.y) <= 100,
-          ),
-      );
+    // Filtra os nós que possuem a mesma posição y do primeiro nó condicional
+    const sameYNodes = nodes.filter((node) => node.position.y === newConditions[0].position.y);
+    // Procura o maior valor de x entre os nós que possuem a mesma posição y
+    const maxX = Math.max(...sameYNodes.map((node) => node.position.x));
+    // Se o maior valor de x for maior que 0, significa que existem nós na mesma posição y
+    // Então adiciona o novo nó condicional com um x maior que o maior valor de x encontrado
+    if (maxX > 0) {
+      newConditions[0].position.x = maxX + 300;
+      newConditions[1].position.x = maxX + 600;
+    }
 
-    console.log('conditional conflict', hasConflict(newNodes))
+    // Adiciona os novos nós condicionais ao array de nós
+    setNodes((nds) => [...nds, ...newConditions]);
 
-    // checar se as medidas não colidem com outras medidas dentro do node
-
-    setNodes((nds) => [...nds, ...newNodes]);
-
+    // Reseta o nó selecionado
     setSelectedNode(null);
   }, [nodes, selectedNode]);
 
   const deleteSelectedNode = useCallback(() => {
     if (selectedNode) {
+      if(selectedNode.id === '0') {
+        alert('Não é possivel remover o primeiro nó')
+        return
+      }
       setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
     }
     setSelectedNode(null);
