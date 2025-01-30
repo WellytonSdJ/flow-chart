@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import { SetStateAction, useCallback, useRef, useState } from 'react';
-import { ReactFlow, Controls, Background, useNodesState, useEdgesState, useReactFlow, addEdge, Panel, NodeToolbar, Connection } from '@xyflow/react';
+import { useCallback, useRef, useState } from 'react';
+import { ReactFlow, Controls, Background, useNodesState, useEdgesState, useReactFlow, addEdge, Connection } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Button } from '@/components/ui/button';
 import DragHandleNode from '../DragHandleNode';
 
-// criar um nó partidndo do nó selecionado
-// ajustar posições automaticamente
-// proibir mover nó acima de 'nó anterior + 100' (altura base)
-// excluir nó selecionado
-// criar ligações entre nós
+// [x] Criar um nó partindo do nó selecionado
+// [ ] Ajustar posições automaticamente
+// [ ] Proibir mover nó acima de 'nó anterior + 100' (altura base)
+// [ ] Excluir nó selecionado
+// [ ] Criar ligações entre nós
 
 type Node = {
   id: string;
@@ -50,7 +50,6 @@ export function Flow() {
     [],
   );
 
-  const [open, setOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
   console.log(nodes)
@@ -61,42 +60,34 @@ export function Flow() {
       const { id, data, position } = node
       console.log('node', node)
       setSelectedNode({ id, data, position });
-      setOpen(true);
     },
     []
   );
 
-  const onClose = useCallback(() => {
-    setOpen(false);
-  }, []);
+
 
   const addNode = useCallback(
     (event: React.MouseEventHandler<HTMLButtonElement>) => {
       const { clientX, clientY } =
         'changedTouches' in event ? event.changedTouches[0] : event;
 
-      console.log('event', event)
+        console.log('selectedNode', selectedNode)
+        const baseX = selectedNode?.position.x ?? 0
+        const baseY = selectedNode?.position.y ?? 50
+
+      console.log('add node', {baseX, baseY})  
+
+      
 
       const newNode: Node = {
         id: getId(),
         position: {
-          x: selectedNode
-            ? // se o usuario clicou em um node, manter a posicao x do node selecionado
-            selectedNode.position.x
-            : nodes.length
-              ? // se ja ha nodes na tela, manter a posicao x do ultimo node
-              nodes[nodes.length - 1].position.x
-              : // se nao ha nodes na tela, usar a posicao x do clique
-              screenToFlowPosition({ x: clientX, y: clientY }).x,
-          y: selectedNode
-            ? selectedNode.position.y + 50
-            : nodes.length
-              ? nodes[nodes.length - 1].position.y + 50
-              : screenToFlowPosition({ x: clientX, y: clientY }).y,
+          x: baseX,
+          y: baseY + 150
         },
         data: { label: `Node ${id}` },
         type: 'input',
-        origin: [0.5, 0.0],
+        // origin: [0.5, 0.0],
       };
 
       // Verifica se há conflito de posição entre o novo nó e os nós existentes
@@ -124,17 +115,20 @@ export function Flow() {
       console.log(hasConflict(newNode))
 
 
-      setNodes(nds => [...nds, newNode]);
-      // setEdges((eds) =>
-      //   eds.concat({ id, source: connectionState.fromNode.id, target: id }),
-      // );
     },
-    [nodes, screenToFlowPosition],
+    [nodes, screenToFlowPosition, selectedNode],
   );
 
   const addConditionalNodes = useCallback(() => {
     const baseX = selectedNode ? selectedNode.position.x : 0;
     const baseY = selectedNode ? selectedNode.position.y : 50;
+
+    console.log(
+      'new conditional',
+      {
+        baseX,
+        baseY
+      })
 
     const newNodes: Node[] = [
       {
@@ -142,21 +136,18 @@ export function Flow() {
         position: { x: baseX, y: baseY + 100 },
         data: { label: `Conditional ${id}` },
         type: 'input',
-        origin: [0.5, 0.0],
       },
       {
         id: getId(),
         position: { x: baseX - 100, y: baseY + 150 },
         data: { label: `condition 1 ${id}` },
         type: 'input',
-        origin: [0.5, 0.0],
       },
       {
         id: getId(),
         position: { x: baseX + 100, y: baseY + 150 },
         data: { label: `condition 2 ${id}` },
         type: 'input',
-        origin: [0.5, 0.0],
       },
     ];
 
@@ -179,7 +170,7 @@ export function Flow() {
     setNodes((nds) => [...nds, ...newNodes]);
 
     setSelectedNode(null);
-  }, [nodes]);
+  }, [nodes, selectedNode]);
 
   const deleteSelectedNode = useCallback(() => {
     if (selectedNode) {
@@ -187,6 +178,7 @@ export function Flow() {
     }
     setSelectedNode(null);
   }, [nodes, selectedNode]);
+
 
 
   return (
@@ -219,5 +211,4 @@ export function Flow() {
     </div>
   );
 }
-
 
